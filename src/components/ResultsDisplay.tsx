@@ -19,6 +19,13 @@ export default function ResultsDisplay({ results }: ResultsDisplayProps) {
     })
   }
 
+  const formatJoinDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric'
+    })
+  }
+
   const formatNumber = (num: number) => {
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + 'M'
@@ -75,11 +82,13 @@ export default function ResultsDisplay({ results }: ResultsDisplayProps) {
 
   return (
     <div className="enhanced-results-container">
-      {/* User Profile Header */}
+      {/* User Profile Header with Cover Image */}
       <div className="profile-header">
+        {/* Cover Image - Prominent display above everything */}
         {displayUser.coverPicture && (
-          <div className="cover-image" style={{ backgroundImage: `url(${displayUser.coverPicture})` }} />
+          <div className="cover-image-banner" style={{ backgroundImage: `url(${displayUser.coverPicture})` }} />
         )}
+        
         <div className="profile-info">
           <div className="profile-left">
             {displayUser.profile_image_url && (
@@ -92,44 +101,54 @@ export default function ResultsDisplay({ results }: ResultsDisplayProps) {
           </div>
           <div className="profile-right">
             <div className="profile-name-section">
+              {/* Name with Verification Badge */}
               <div className="name-and-badge">
                 <h2 className="profile-name">{displayUser.name}</h2>
                 <VerificationBadge verified={displayUser.verified} isBlueVerified={displayUser.isBlueVerified} />
                 {displayUser.protected && (
-                  <svg width="16" height="16" viewBox="0 0 24 24" className="protected-badge">
+                  <svg width="18" height="18" viewBox="0 0 24 24" className="protected-badge">
                     <path fill="currentColor" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
                   </svg>
                 )}
               </div>
+              
+              {/* Username and ID */}
               <div className="username-and-id">
                 <span className="profile-username">@{displayUser.username}</span>
                 <span className="profile-id">ID: {displayUser.id}</span>
               </div>
+              
+              {/* Bio */}
               {displayUser.bio && <p className="profile-bio">{displayUser.bio}</p>}
               
-              <div className="profile-metadata">
+              {/* Enhanced Metadata Section */}
+              <div className="profile-metadata-enhanced">
                 {displayUser.location && (
-                  <div className="metadata-item">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <div className="metadata-item-enhanced">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="metadata-icon">
                       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                     </svg>
-                    <span>{displayUser.location}</span>
+                    <span className="metadata-text">{displayUser.location}</span>
                   </div>
                 )}
+                
                 {displayUser.url && (
-                  <div className="metadata-item">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <div className="metadata-item-enhanced">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="metadata-icon">
                       <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H6.9C4.01 7 1.6 9.42 1.6 12.1s2.41 5.1 5.3 5.1h4v-1.9H6.9c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9.1-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.89 0 5.3-2.42 5.3-5.1S19.99 7 17.1 7z"/>
                     </svg>
-                    <a href={displayUser.url} target="_blank" rel="noopener noreferrer">{displayUser.url}</a>
+                    <a href={displayUser.url} target="_blank" rel="noopener noreferrer" className="metadata-link">
+                      {displayUser.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                    </a>
                   </div>
                 )}
+                
                 {displayUser.created_at && (
-                  <div className="metadata-item">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <div className="metadata-item-enhanced">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="metadata-icon">
                       <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
                     </svg>
-                    <span>Joined {formatDate(displayUser.created_at)}</span>
+                    <span className="metadata-text">Joined {formatJoinDate(displayUser.created_at)}</span>
                   </div>
                 )}
               </div>

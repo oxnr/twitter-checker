@@ -241,12 +241,22 @@
     background-color: color-mix(in hsl, canvas, canvasText 5%);
   }
 
+  .cover-image-banner {
+    height: 300px;
+    background-size: cover;
+    background-position: center;
+    background-color: color-mix(in hsl, canvas, canvasText 5%);
+    border-radius: 0.75rem 0.75rem 0 0;
+    position: relative;
+    background-repeat: no-repeat;
+  }
+
   .profile-info {
     display: flex;
     gap: 1.5rem;
-    padding: 2rem;
+    padding: 1rem 2rem 2rem 2rem;
     position: relative;
-    min-height: 400px;
+    min-height: 420px;
   }
 
   .profile-left {
@@ -254,14 +264,15 @@
   }
 
   .profile-avatar {
-    width: 120px;
-    height: 120px;
+    width: 140px;
+    height: 140px;
     border-radius: 50%;
-    border: 4px solid canvas;
+    border: 5px solid canvas;
     object-fit: cover;
-    margin-top: 60px;
+    margin-top: -70px;
     position: relative;
-    z-index: 1;
+    z-index: 2;
+    box-shadow: 0 4px 12px color-mix(in hsl, canvasText, transparent 85%);
   }
 
   .profile-right {
@@ -293,10 +304,12 @@
 
   .verification-badge.verified {
     color: #1DA1F2;
+    filter: drop-shadow(0 0 2px rgba(29, 161, 242, 0.3));
   }
 
   .verification-badge.blue-verified {
     color: #1DA1F2;
+    filter: drop-shadow(0 0 2px rgba(29, 161, 242, 0.3));
   }
 
   .protected-badge {
@@ -357,6 +370,45 @@
 
   .metadata-item a:hover {
     text-decoration: underline;
+  }
+
+  /* Enhanced Metadata Styles */
+  .profile-metadata-enhanced {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+  }
+
+  .metadata-item-enhanced {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+  }
+
+  .metadata-icon {
+    color: color-mix(in hsl, canvasText, transparent 30%);
+    flex-shrink: 0;
+  }
+
+  .metadata-text {
+    color: canvasText;
+    font-size: 0.9375rem;
+    font-weight: 400;
+  }
+
+  .metadata-link {
+    color: light-dark(hsl(12 94% 60%), hsl(280 80% 80%));
+    text-decoration: none;
+    font-size: 0.9375rem;
+    font-weight: 400;
+    transition: all 0.2s ease;
+  }
+
+  .metadata-link:hover {
+    text-decoration: underline;
+    color: light-dark(hsl(12 94% 55%), hsl(280 80% 75%));
   }
 
   .profile-stats {

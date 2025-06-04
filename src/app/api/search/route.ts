@@ -38,78 +38,73 @@ export async function GET(request: NextRequest) {
     let memoryWorked = false
     
     try {
-      const memoryResponse = await fetch(`https://api.memory.lol/v1/tw/${cleanUsername}`, {
-        headers,
-      })
+      // Use new multi-source username history API
+      const baseUrl = request.url.split('/api/')[0]
+      const historyResponse = await fetch(`${baseUrl}/api/username-history?username=${cleanUsername}`)
+      
+      console.log('Username history API response status:', historyResponse.status)
 
-      console.log('Memory.lol response status:', memoryResponse.status)
-
-      if (memoryResponse.ok) {
-        const memoryData: MemoryLolResponse = await memoryResponse.json()
-        console.log('Memory.lol data:', memoryData)
+      if (historyResponse.ok) {
+        const historyData = await historyResponse.json()
+        console.log('Username history data:', historyData)
         
-        if (memoryData.accounts && memoryData.accounts.length > 0) {
-          const account = memoryData.accounts[0]
-          const screenNames = account.screen_names
-          
-          // Get all historical names except the current one
-          const allNames = Object.keys(screenNames)
-          const historicalNames = allNames.filter(name => name.toLowerCase() !== cleanUsername.toLowerCase())
-          
-          // Format dates
-          const dates: Record<string, string[]> = {}
-          Object.entries(screenNames).forEach(([name, nameDates]) => {
-            if (nameDates && nameDates.length > 0) {
-              dates[name] = nameDates
-            }
-          })
-
+        if (historyData.historical_names && historyData.historical_names.length > 0) {
           // Get enhanced user data
           let enhancedUserData: any = {}
           try {
-            const userResponse = await fetch(`${request.url.split('/api/')[0]}/api/twitter-user?username=${cleanUsername}`)
+            const userResponse = await fetch(`${baseUrl}/api/twitter-user?username=${cleanUsername}`)
             if (userResponse.ok) {
               enhancedUserData = await userResponse.json()
             }
           } catch (error) {
-            console.log('Failed to get enhanced user data for Memory.lol result:', error)
+            console.log('Failed to get enhanced user data:', error)
+          }
+
+          // Create dates object from usernames data
+          const dates: Record<string, string[]> = {}
+          if (historyData.usernames) {
+            historyData.usernames.forEach((entry: any) => {
+              dates[entry.username] = [entry.start_date, entry.end_date || '2025-02-25']
+            })
           }
 
           const user: TwitterUser = {
-            id: account.id_str,
+            id: enhancedUserData.id || '000000000',
             username: cleanUsername,
             name: enhancedUserData.name || cleanUsername.charAt(0).toUpperCase() + cleanUsername.slice(1),
             profile_image_url: enhancedUserData.profile_image_url || `https://unavatar.io/twitter/${cleanUsername}`,
-            bio: enhancedUserData.bio,
-            followers_count: enhancedUserData.followers_count,
-            following_count: enhancedUserData.following_count,
-            tweet_count: enhancedUserData.tweet_count,
-            verified: enhancedUserData.verified,
-            isBlueVerified: enhancedUserData.isBlueVerified,
-            verifiedType: enhancedUserData.verifiedType,
-            created_at: enhancedUserData.created_at,
-            location: enhancedUserData.location,
-            url: enhancedUserData.url,
-            protected: enhancedUserData.protected,
-            favouritesCount: enhancedUserData.favouritesCount,
-            mediaCount: enhancedUserData.mediaCount,
-            canDm: enhancedUserData.canDm,
-            coverPicture: enhancedUserData.coverPicture,
+            bio: enhancedUserData.bio || undefined,
+            followers_count: enhancedUserData.followers_count || undefined,
+            following_count: enhancedUserData.following_count || undefined,
+            tweet_count: enhancedUserData.tweet_count || undefined,
+            verified: enhancedUserData.verified || false,
+            isBlueVerified: enhancedUserData.isBlueVerified || false,
+            verifiedType: enhancedUserData.verifiedType || undefined,
+            created_at: enhancedUserData.created_at || undefined,
+            location: enhancedUserData.location || undefined,
+            url: enhancedUserData.url || undefined,
+            protected: enhancedUserData.protected || false,
+            favouritesCount: enhancedUserData.favouritesCount || undefined,
+            mediaCount: enhancedUserData.mediaCount || undefined,
+            canDm: enhancedUserData.canDm || false,
+            coverPicture: enhancedUserData.coverPicture || null,
           }
 
           const result: SearchResult = {
             user,
-            historicalNames,
+            historicalNames: historyData.historical_names,
             dates,
           }
 
-          console.log('Returning Memory.lol result:', result)
+          console.log('Returning multi-source username history result:', result)
           memoryWorked = true
           return NextResponse.json(result)
+        } else {
+          console.log('No historical usernames found from any source')
         }
       }
-    } catch (memoryError) {
-      console.log('Memory.lol API failed:', memoryError)
+    } catch (historyError) {
+      console.log('Username history API failed:', historyError)
     }
 
     // If Memory.lol worked, we would have returned. If not, proceed to fetch current user details only.
@@ -135,15 +130,25 @@ export async function GET(request: NextRequest) {
                 console.log('Twitter user API response data:', fetchedUserData);
                 
                 enhancedUser = {
-                    id: fetchedUserData.id || '000000000', // Use ID from fetched data if available
+                    id: fetchedUserData.id || '000000000',
                     username: cleanUsername,
-                    name: fetchedUserData.name || formatUsername(cleanUsername), // Use name from fetched data
+                    name: fetchedUserData.name || formatUsername(cleanUsername),
                     profile_image_url: fetchedUserData.profile_image_url || `https://unavatar.io/twitter/${cleanUsername}`,
-                    bio: fetchedUserData.bio,
-                    followers_count: fetchedUserData.followers_count,
-                    following_count: fetchedUserData.following_count,
-                    tweet_count: fetchedUserData.tweet_count,
-                    verified: fetchedUserData.verified,
+                    bio: fetchedUserData.bio || undefined,
+                    followers_count: fetchedUserData.followers_count || undefined,
+                    following_count: fetchedUserData.following_count || undefined,
+                    tweet_count: fetchedUserData.tweet_count || undefined,
+                    verified: fetchedUserData.verified || false,
+                    isBlueVerified: fetchedUserData.isBlueVerified || false,
+                    verifiedType: fetchedUserData.verifiedType || undefined,
+                    created_at: fetchedUserData.created_at || undefined,
+                    location: fetchedUserData.location || undefined,
+                    url: fetchedUserData.url || undefined,
+                    protected: fetchedUserData.protected || false,
+                    favouritesCount: fetchedUserData.favouritesCount || undefined,
+                    mediaCount: fetchedUserData.mediaCount || undefined,
+                    canDm: fetchedUserData.canDm || false,
+                    coverPicture: fetchedUserData.coverPicture || null,
                 };
                 console.log('Enhanced user created from /api/twitter-user:', enhancedUser);
             } else {
@@ -151,9 +156,23 @@ export async function GET(request: NextRequest) {
                 enhancedUser = {
                     id: '000000000',
                     username: cleanUsername,
-                    name: formatUsername(cleanUsername), // Use helper for formatting
+                    name: formatUsername(cleanUsername),
                     profile_image_url: `https://unavatar.io/twitter/${cleanUsername}`,
-                    // Other fields remain null/undefined
+                    bio: undefined,
+                    followers_count: undefined,
+                    following_count: undefined,
+                    tweet_count: undefined,
+                    verified: false,
+                    isBlueVerified: false,
+                    verifiedType: undefined,
+                    created_at: undefined,
+                    location: undefined,
+                    url: undefined,
+                    protected: false,
+                    favouritesCount: undefined,
+                    mediaCount: undefined,
+                    canDm: false,
+                    coverPicture: undefined,
                 };
             }
         } catch (error) {
@@ -161,9 +180,23 @@ export async function GET(request: NextRequest) {
             enhancedUser = {
                 id: '000000000',
                 username: cleanUsername,
-                name: formatUsername(cleanUsername), // Use helper for formatting
+                name: formatUsername(cleanUsername),
                 profile_image_url: `https://unavatar.io/twitter/${cleanUsername}`,
-                 // Other fields remain null/undefined
+                bio: undefined,
+                followers_count: undefined,
+                following_count: undefined,
+                tweet_count: undefined,
+                verified: false,
+                isBlueVerified: false,
+                verifiedType: undefined,
+                created_at: undefined,
+                location: undefined,
+                url: undefined,
+                protected: false,
+                favouritesCount: undefined,
+                mediaCount: undefined,
+                canDm: false,
+                coverPicture: undefined,
             };
         }
 
