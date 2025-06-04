@@ -9,16 +9,33 @@ function formatUsername(username: string): string {
     .join(' ');
 }
 
-// Function to get real display name from twitter-user API
-async function getRealDisplayName(username: string, baseUrl: string): Promise<string> {
+// Function to get real display name from TwitterAPI.io directly (faster for autocomplete)
+async function getRealDisplayName(username: string): Promise<string> {
+  const apiKey = process.env.TWITTER_API_IO_KEY
+  
+  if (!apiKey) {
+    console.log('No TwitterAPI.io key available for autocomplete')
+    return formatUsername(username)
+  }
+
   try {
-    const response = await fetch(`${baseUrl}/api/twitter-user?username=${username}`, {
-      signal: AbortSignal.timeout(3000) // Quick timeout for autocomplete
+    console.log(`Fetching real display name for ${username} from TwitterAPI.io`)
+    const response = await fetch(`https://api.twitterapi.io/twitter/user/info?userName=${username}`, {
+      headers: {
+        'X-API-Key': apiKey,
+        'Accept': 'application/json'
+      },
+      signal: AbortSignal.timeout(2000) // Quick timeout for autocomplete
     })
-    
+
     if (response.ok) {
-      const userData = await response.json()
-      return userData.name || formatUsername(username)
+      const data = await response.json()
+      if (data && data.status === 'success' && data.data && data.data.name) {
+        console.log(`Found real name for ${username}: ${data.data.name}`)
+        return data.data.name
+      }
+    } else {
+      console.log(`TwitterAPI.io failed for ${username} with status:`, response.status)
     }
   } catch (error) {
     console.log(`Failed to get real name for ${username}:`, error)
@@ -40,65 +57,21 @@ export async function GET(request: NextRequest) {
 
   try {
     let suggestions: any[] = []
-    const baseUrl = request.url.split('/api/')[0] // Get base URL for internal API calls
     
-    // Check if user exists via Memory.lol or unavatar
-    let userExists = false
+    // Strategy 1: Try to get real display name directly from TwitterAPI.io
+    console.log('Attempting to fetch real display name for autocomplete...')
+    const realDisplayName = await getRealDisplayName(query)
     
-    // First try Memory.lol search for exact match
-    try {
-      const memoryResponse = await fetch(`https://api.memory.lol/v1/tw/${query}`, {
-        headers: {
-          'User-Agent': 'Twitter-History-App/1.0',
-          'Accept': 'application/json',
-        },
-      })
-      
-      if (memoryResponse.ok) {
-        const memoryData = await memoryResponse.json()
-        console.log('Memory.lol autocomplete response:', memoryData)
-        
-        if (memoryData.accounts && memoryData.accounts.length > 0) {
-          userExists = true
-        }
-      }
-    } catch (error) {
-      console.log('Memory.lol autocomplete failed:', error)
-    }
+    // If we got a real name that's different from formatted username, use it
+    const formattedName = formatUsername(query)
+    const displayName = (realDisplayName !== formattedName) ? realDisplayName : formattedName
     
-    // If not found in Memory.lol, check unavatar
-    if (!userExists) {
-      try {
-        const avatarResponse = await fetch(`https://unavatar.io/twitter/${query}`, {
-          method: 'HEAD',
-          signal: AbortSignal.timeout(2000)
-        })
-        
-        if (avatarResponse.ok) {
-          userExists = true
-        }
-      } catch (error) {
-        console.log('Unavatar check failed:', error)
-      }
-    }
-
-    // If user exists, get the real display name and add suggestion
-    if (userExists) {
-      const realDisplayName = await getRealDisplayName(query, baseUrl)
-      
-      suggestions.push({
-        username: query,
-        name: realDisplayName,
-        profile_image_url: `https://unavatar.io/twitter/${query}`,
-      })
-    } else {
-      // Still add suggestion with formatted name for typing experience
-      suggestions.push({
-        username: query,
-        name: formatUsername(query),
-        profile_image_url: `https://unavatar.io/twitter/${query}`,
-      })
-    }
+    // Always provide a suggestion for responsive autocomplete
+    suggestions.push({
+      username: query,
+      name: displayName,
+      profile_image_url: `https://unavatar.io/twitter/${query}`,
+    })
 
     console.log('Enhanced autocomplete suggestions:', suggestions)
     return NextResponse.json({ suggestions })
