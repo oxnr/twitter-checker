@@ -42,6 +42,14 @@ export default function ResultsDisplay({ results }: ResultsDisplayProps) {
     }
   }
 
+  const linkifyHandles = (text: string) => {
+    // Match @username patterns but avoid email addresses
+    // Negative lookbehind to avoid matching email addresses like user@domain.com
+    return text.replace(/(?<![a-zA-Z0-9])@([a-zA-Z0-9_]{1,15})(?![a-zA-Z0-9_.])/g, (match, username) => {
+      return `<button class="bio-handle-link" onclick="window.location.href='/?search=${encodeURIComponent(username)}'">@${username}</button>`
+    })
+  }
+
   // Load enhanced user data in background
   useEffect(() => {
     const loadEnhancedUserData = async () => {
@@ -118,8 +126,13 @@ export default function ResultsDisplay({ results }: ResultsDisplayProps) {
                 <span className="profile-id">ID: {displayUser.id}</span>
               </div>
               
-              {/* Bio */}
-              {displayUser.bio && <p className="profile-bio">{displayUser.bio}</p>}
+              {/* Bio with clickable handles */}
+              {displayUser.bio && (
+                <p 
+                  className="profile-bio" 
+                  dangerouslySetInnerHTML={{ __html: linkifyHandles(displayUser.bio) }}
+                />
+              )}
               
               {/* Enhanced Metadata Section */}
               <div className="profile-metadata-enhanced">
