@@ -1,5 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Helper function to format usernames properly
+function formatUsername(username: string): string {
+  if (!username) return '';
+  return username
+    .split(/[_.-]/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+// Function to get real display name from twitter-user API
+async function getRealDisplayName(username: string, baseUrl: string): Promise<string> {
+  try {
+    const response = await fetch(`${baseUrl}/api/twitter-user?username=${username}`, {
+      signal: AbortSignal.timeout(3000) // Quick timeout for autocomplete
+    })
+    
+    if (response.ok) {
+      const userData = await response.json()
+      return userData.name || formatUsername(username)
+    }
+  } catch (error) {
+    console.log(`Failed to get real name for ${username}:`, error)
+  }
+  
+  return formatUsername(username)
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const query = searchParams.get('q')
@@ -13,6 +40,10 @@ export async function GET(request: NextRequest) {
 
   try {
     let suggestions: any[] = []
+    const baseUrl = request.url.split('/api/')[0] // Get base URL for internal API calls
+    
+    // Check if user exists via Memory.lol or unavatar
+    let userExists = false
     
     // First try Memory.lol search for exact match
     try {
@@ -28,103 +59,57 @@ export async function GET(request: NextRequest) {
         console.log('Memory.lol autocomplete response:', memoryData)
         
         if (memoryData.accounts && memoryData.accounts.length > 0) {
-          suggestions.push({
-            username: query,
-            name: query.charAt(0).toUpperCase() + query.slice(1),
-            profile_image_url: `https://unavatar.io/twitter/${query}`,
-          })
+          userExists = true
         }
       }
     } catch (error) {
       console.log('Memory.lol autocomplete failed:', error)
     }
-
-    // Only suggest the exact query - no generic variations
-    const variations = [
-      query, // exact match only
-    ]
-
-    // Try to find actual existing accounts
-    const validationPromises = variations.slice(0, 5).map(async (variation) => {
+    
+    // If not found in Memory.lol, check unavatar
+    if (!userExists) {
       try {
-        // Quick check if this username likely exists
-        const avatarResponse = await fetch(`https://unavatar.io/twitter/${variation}`, {
+        const avatarResponse = await fetch(`https://unavatar.io/twitter/${query}`, {
           method: 'HEAD',
+          signal: AbortSignal.timeout(2000)
         })
         
         if (avatarResponse.ok) {
-          // Get enhanced user data with real display name
-          let enhancedData = null
-          try {
-            const baseUrl = request.url.split('/api/')[0]
-            const userApiUrl = `${baseUrl}/api/twitter-user?username=${variation}`
-            const userResponse = await fetch(userApiUrl)
-            if (userResponse.ok) {
-              enhancedData = await userResponse.json()
-            }
-          } catch (error) {
-            console.log('Failed to get enhanced autocomplete data:', error)
-          }
-
-          return {
-            username: variation,
-            name: enhancedData?.name || variation.charAt(0).toUpperCase() + variation.slice(1),
-            profile_image_url: enhancedData?.profile_image_url || `https://unavatar.io/twitter/${variation}`,
-          }
+          userExists = true
         }
       } catch (error) {
-        // Skip invalid usernames
+        console.log('Unavatar check failed:', error)
       }
-      return null
-    })
+    }
 
-    try {
-      const validationResults = await Promise.allSettled(validationPromises)
+    // If user exists, get the real display name and add suggestion
+    if (userExists) {
+      const realDisplayName = await getRealDisplayName(query, baseUrl)
       
-      validationResults.forEach((result) => {
-        if (result.status === 'fulfilled' && result.value) {
-          // Avoid duplicates
-          if (!suggestions.some(s => s.username === result.value!.username)) {
-            suggestions.push(result.value)
-          }
-        }
-      })
-    } catch (error) {
-      console.log('Validation failed:', error)
-    }
-
-    // Always ensure the exact query is included as first suggestion with enhanced data
-    if (!suggestions.some(s => s.username === query)) {
-      // Get enhanced user data for the main suggestion
-      let enhancedData = null
-      try {
-        const baseUrl = request.url.split('/api/')[0]
-        const userApiUrl = `${baseUrl}/api/twitter-user?username=${query}`
-        const userResponse = await fetch(userApiUrl)
-        if (userResponse.ok) {
-          enhancedData = await userResponse.json()
-        }
-      } catch (error) {
-        console.log('Failed to get enhanced data for main suggestion:', error)
-      }
-
-      suggestions.unshift({
+      suggestions.push({
         username: query,
-        name: enhancedData?.name || query.charAt(0).toUpperCase() + query.slice(1),
-        profile_image_url: enhancedData?.profile_image_url || `https://unavatar.io/twitter/${query}`,
+        name: realDisplayName,
+        profile_image_url: `https://unavatar.io/twitter/${query}`,
+      })
+    } else {
+      // Still add suggestion with formatted name for typing experience
+      suggestions.push({
+        username: query,
+        name: formatUsername(query),
+        profile_image_url: `https://unavatar.io/twitter/${query}`,
       })
     }
 
-    console.log('Final autocomplete suggestions:', suggestions)
-    return NextResponse.json({ suggestions: suggestions.slice(0, 4) })
+    console.log('Enhanced autocomplete suggestions:', suggestions)
+    return NextResponse.json({ suggestions })
 
   } catch (error) {
     console.error('Autocomplete error:', error)
     
-    // Simple fallback
+    // Simple fallback with proper formatting
     const fallbackSuggestions = [{
       username: query,
-      name: query.charAt(0).toUpperCase() + query.slice(1),
+      name: formatUsername(query),
       profile_image_url: `https://unavatar.io/twitter/${query}`,
     }]
     

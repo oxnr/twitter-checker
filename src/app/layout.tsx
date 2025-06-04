@@ -5,8 +5,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Past Handles Finder',
-  description: 'Find historical Twitter usernames and handle changes',
+  title: 'PastSelf - Twitter Username History',
+  description: 'Discover who they used to be. Track Twitter username changes and account history.',
   icons: {
     icon: '/favicon.svg',
   },

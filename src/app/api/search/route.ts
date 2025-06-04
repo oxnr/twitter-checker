@@ -85,6 +85,16 @@ export async function GET(request: NextRequest) {
             following_count: enhancedUserData.following_count,
             tweet_count: enhancedUserData.tweet_count,
             verified: enhancedUserData.verified,
+            isBlueVerified: enhancedUserData.isBlueVerified,
+            verifiedType: enhancedUserData.verifiedType,
+            created_at: enhancedUserData.created_at,
+            location: enhancedUserData.location,
+            url: enhancedUserData.url,
+            protected: enhancedUserData.protected,
+            favouritesCount: enhancedUserData.favouritesCount,
+            mediaCount: enhancedUserData.mediaCount,
+            canDm: enhancedUserData.canDm,
+            coverPicture: enhancedUserData.coverPicture,
           }
 
           const result: SearchResult = {

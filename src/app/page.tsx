@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import SearchBox from '@/components/SearchBox'
 import ResultsDisplay from '@/components/ResultsDisplay'
 import type { SearchResult } from '@/types'
@@ -11,15 +11,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [isDarkMode, setIsDarkMode] = useState(false)
 
-  // Initialize theme on component mount
-  useEffect(() => {
-    const html = document.documentElement
-    // Start in light mode by default
-    html.dataset.theme = 'light'
-    setIsDarkMode(false)
-  }, [])
-
-  const handleSearch = async (username: string) => {
+  const handleSearch = useCallback(async (username: string) => {
     if (!username.trim()) return
 
     console.log('Frontend: Starting search for:', username)
@@ -66,7 +58,30 @@ export default function Home() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  // Initialize theme on component mount
+  useEffect(() => {
+    const html = document.documentElement
+    // Check for stored theme preference or use system preference
+    const storedTheme = localStorage.getItem('theme')
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    
+    const theme = storedTheme || (prefersDark ? 'dark' : 'light')
+    html.dataset.theme = theme
+    setIsDarkMode(theme === 'dark')
+  }, [])
+
+  // Handle URL search parameter
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const searchParam = urlParams.get('search')
+    if (searchParam) {
+      handleSearch(searchParam)
+      // Clear the URL parameter after triggering search
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [handleSearch])
 
   return (
     <>
@@ -82,8 +97,9 @@ export default function Home() {
           </svg>
         </div>
         <h1 className="site-title">
-          find past handles
+          PastSelf
         </h1>
+        <p className="site-subtitle">discover who they used to be</p>
       </header>
 
       <main className="main-content">
@@ -102,7 +118,7 @@ export default function Home() {
         {results && (
           <div className="results-card">
             <div className="card-header">
-              <span>history</span>
+              <span>overview</span>
               <span className="badge">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -134,6 +150,7 @@ export default function Home() {
           const currentTheme = html.dataset.theme || 'light'
           const newTheme = currentTheme === 'light' ? 'dark' : 'light'
           html.dataset.theme = newTheme
+          localStorage.setItem('theme', newTheme)
           setIsDarkMode(newTheme === 'dark')
         }}
         title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}

@@ -8,7 +8,16 @@ export interface TwitterUser {
   following_count?: number
   tweet_count?: number
   verified?: boolean
+  isBlueVerified?: boolean
+  verifiedType?: string | null
   created_at?: string
+  location?: string
+  url?: string
+  protected?: boolean
+  favouritesCount?: number
+  mediaCount?: number
+  canDm?: boolean
+  coverPicture?: string
 }
 
 export interface SearchResult {
